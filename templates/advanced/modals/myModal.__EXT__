@@ -1,0 +1,18 @@
+import { Modal } from 'discordjs-nextgen';
+
+// [TS]
+import type { ModalInteraction } from 'discordjs-nextgen';
+// [/TS]
+
+const myModal = Modal.create('myModal')
+  .title('Geri Bildirim')
+  .short('name', { label: 'Adınız', placeholder: 'Buraya yazın...' })
+  .paragraph('comment', { label: 'Yorumunuz', min: 10, max: 1000 })
+  .onSubmit(async (ctx // [TS]: ModalInteraction // [/TS]) => {
+    const name = ctx.values.name;
+    const comment = ctx.values.comment;
+    
+    await ctx.reply({ content: `Teşekkürler ${name}! Yorumun alındı.`, ephemeral: true });
+  });
+
+export default myModal;

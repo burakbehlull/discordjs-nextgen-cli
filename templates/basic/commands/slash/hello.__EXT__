@@ -1,0 +1,15 @@
+// [TS]
+import type { SlashCommand } from 'discordjs-nextgen';
+// [/TS]
+import { SlashCommandBuilder } from 'discordjs-nextgen';
+
+const sayHello // [TS]: SlashCommand // [/TS] = {
+    data: new SlashCommandBuilder()
+        .setName('hello')
+        .setDescription('hello'),
+    run: async (ctx) => {
+        await ctx.reply("hi");
+    }
+};
+
+export default sayHello;

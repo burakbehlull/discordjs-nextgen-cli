@@ -1,0 +1,13 @@
+// [TS]
+import type { PrefixCommand } from 'discordjs-nextgen';
+// [/TS]
+
+const happyCommand // [TS]: PrefixCommand // [/TS] = { 
+    name: 'happy', 
+    description: 'Happy emoji', 
+    run: async (ctx) => { 
+        await ctx.reply("😊");
+    } 
+};
+
+export default happyCommand;

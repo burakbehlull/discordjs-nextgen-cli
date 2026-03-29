@@ -1,15 +1,19 @@
-import { App, Intents } from "discordjs-nextgen";
+import { App, Intents } from 'discordjs-nextgen';
 import "dotenv/config";
 
 const app = new App({
-  intents: Intents.ALL,
+    intents: Intents.ALL
 });
 
-app
-  .prefix({
-    prefix: "!",
-    folder: "commands/prefix",
-  })
-  .events("events");
+app.setPresence({
+    status: 'idle',
+    activities: [
+        {
+            name: 'NextGen',
+            type: 0,
+            url: null,
+        },
+    ],
+});
 
 app.run(process.env.TOKEN);

@@ -1,0 +1,12 @@
+// [TS]
+import type { ButtonInteraction } from 'discordjs-nextgen';
+// [/TS]
+
+const myButton = {
+  customId: 'myButton',
+  run: async (ctx // [TS]: ButtonInteraction // [/TS]) => {
+    await ctx.showModal("myModal");
+  },
+};
+
+export default myButton;

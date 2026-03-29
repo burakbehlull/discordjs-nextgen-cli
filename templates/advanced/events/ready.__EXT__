@@ -1,9 +1,0 @@
-const readyEvent = {
-  name: "ready",
-  once: true,
-  run: async (client) => {
-    console.log(`🚀 Bot is ready! Logged in as ${client.user.tag}`);
-  },
-};
-
-export default readyEvent;

@@ -1,8 +1,0 @@
-export const config = {
-  prefix: process.env.PREFIX || "!",
-  colors: {
-    primary: "#5865F2",
-    error: "#ED4245",
-    success: "#57F287",
-  },
-};

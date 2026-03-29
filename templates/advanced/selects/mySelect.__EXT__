@@ -1,0 +1,19 @@
+import { Select } from 'discordjs-nextgen';
+
+// [TS]
+import type { SelectInteraction } from 'discordjs-nextgen';
+// [/TS]
+
+const mySelect = Select.create('mySelect')
+    .placeholder('Favori rengini seç...')
+    .options([
+      { label: 'Kırmızı', value: 'red', description: 'Enerjinin rengi' },
+      { label: 'Mavi', value: 'blue', description: 'Huzurun rengi' },
+      { label: 'Yeşil', value: 'green', description: 'Doğanın rengi' }
+    ])
+    .onSelect(async (ctx // [TS]: SelectInteraction // [/TS]) => {
+      const secilen = ctx.values.mySelect;
+      await ctx.reply(`Harika seçim! Demek favori rengin: **${secilen}**`);
+    });
+
+export default mySelect;

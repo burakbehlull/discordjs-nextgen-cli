@@ -1,50 +1,50 @@
-import { App, Intents, Logger } from "discordjs-nextgen";
-import "dotenv/config";
-import "./plugins/index.__EXT__";
+import { App, Intents, Logger, cooldown } from 'discordjs-nextgen';
+import "dotenv/config"
 
 const app = new App({
-  intents: Intents.ALL,
+    intents: Intents.ALL
 });
 
-// Middleware & Plugins
 app.use(Logger({
-  colors: {
-    info: "cyan",
-    warn: "yellow",
-    error: "red",
-  },
+    colors: {
+        info: 'cyan',
+        warn: 'yellow',
+        error: 'red',
+    },
 }));
 
-// Components registration
+app.use(cooldown(10));
+
 app
+  .events('events')
   .prefix({
-    prefix: "!",
-    folder: "commands/prefix",
+    folder: 'commands/prefix',
+    prefix: '.',
   })
   .slash({
-    folder: "commands/slash",
+    folder: 'commands/slash',
   })
   .command({
-    folder: "commands/hybrid",
+    folder: 'commands/hybrid',
   })
-  .events("events")
   .button({
-    folder: "buttons",
+    folder: 'buttons',
   })
   .modal({
-    folder: "modals",
+    folder: 'modals',
   })
   .select({
-    folder: "selects",
+    folder: 'selects',
   });
 
-// Set Presence
 app.setPresence({
-  status: "online",
-  activities: [{
-    name: "NextGen Advanced",
-    type: 0,
-  }],
+    status: 'idle',
+    activities: [
+        {
+            name: 'Nextgen Advanced',
+            type: 0
+        },
+    ],
 });
 
 app.run(process.env.TOKEN);

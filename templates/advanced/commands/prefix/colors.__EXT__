@@ -1,0 +1,23 @@
+// [TS]
+import type { PrefixCommand } from 'discordjs-nextgen';
+// [/TS]
+import { ActionRow } from 'discordjs-nextgen';
+
+const colorsCommand // [TS]: PrefixCommand // [/TS] = { 
+    name: 'colors', 
+    description: 'Color choice', 
+    run: async (ctx) => { 
+        const selectMenu = ctx.app.selects.get('mySelect'); 
+        
+        if (!selectMenu) return ctx.reply('Menü bulunamadı!'); 
+
+        const row = ActionRow.create(selectMenu); 
+
+        await ctx.reply({ 
+            content: 'Lütfen aşağıdan bir renk seç:', 
+            components: [row] 
+        }); 
+    } 
+};
+
+export default colorsCommand;
