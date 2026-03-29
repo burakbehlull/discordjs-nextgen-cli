@@ -1,0 +1,12 @@
+// [TS]
+import type { AppEvent } from 'discordjs-nextgen';
+// [/TS]
+
+const readyEvent // [TS]: AppEvent<'ready'> // [/TS] = {
+  name: 'ready',
+  run: (user) => {
+    console.log(`${user.tag} hazır!`);
+  }
+};
+
+export default readyEvent;
