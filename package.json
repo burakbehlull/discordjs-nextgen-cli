@@ -20,7 +20,8 @@
     "discordjs",
     "discordjs-nextgen",
     "create",
-    "cli"
+    "cli",
+    "nextgen"
   ],
   "author": "Burak <@burakbehlull>",
   "license": "Apache-2.0",
