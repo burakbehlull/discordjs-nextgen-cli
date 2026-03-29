@@ -1,0 +1,8 @@
+import { App, Intents } from "discordjs-nextgen";
+import "dotenv/config";
+
+const app = new App({
+  intents: Intents.ALL,
+});
+
+app.run(process.env.TOKEN);

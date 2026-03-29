@@ -1,0 +1,15 @@
+import { App, Intents } from "discordjs-nextgen";
+import "dotenv/config";
+
+const app = new App({
+  intents: Intents.ALL,
+});
+
+app
+  .prefix({
+    prefix: "!",
+    folder: "commands/prefix",
+  })
+  .events("events");
+
+app.run(process.env.TOKEN);

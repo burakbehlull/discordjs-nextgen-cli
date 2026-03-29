@@ -1,0 +1,9 @@
+const pingCommand = {
+  name: "ping",
+  description: "Check bot latency",
+  run: async (ctx) => {
+    await ctx.reply(`🏓 Pong! Latency is ${ctx.client.ws.ping}ms.`);
+  },
+};
+
+export default pingCommand;

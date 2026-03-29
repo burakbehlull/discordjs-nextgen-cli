@@ -1,0 +1,30 @@
+{
+  "name": "create-discordjs-nextgen",
+  "version": "0.1.0",
+  "description": "Scaffold a Discord bot powered by discordjs-nextgen",
+  "bin": {
+    "create-discordjs-nextgen": "./bin/create-discordjs-nextgen.js"
+  },
+  "type": "module",
+  "files": [
+    "bin",
+    "README.md",
+    "templates"
+  ],
+  "scripts": {
+    "start": "node ./bin/create-discordjs-nextgen.js",
+    "test:smoke": "node ./bin/create-discordjs-nextgen.js test-bot --yes --no-install"
+  },
+  "keywords": [
+    "discord",
+    "discordjs",
+    "discordjs-nextgen",
+    "create",
+    "cli"
+  ],
+  "author": "Burak <@burakbehlull>",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18.17.0"
+  }
+}

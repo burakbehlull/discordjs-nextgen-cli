@@ -1,0 +1,4 @@
+// Registered plugins will appear here
+// For example:
+// import { VoicePlugin } from "discordjs-nextgen-voice";
+// app.use(new VoicePlugin());

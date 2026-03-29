@@ -1,0 +1,50 @@
+import { App, Intents, Logger } from "discordjs-nextgen";
+import "dotenv/config";
+import "./plugins/index.__EXT__";
+
+const app = new App({
+  intents: Intents.ALL,
+});
+
+// Middleware & Plugins
+app.use(Logger({
+  colors: {
+    info: "cyan",
+    warn: "yellow",
+    error: "red",
+  },
+}));
+
+// Components registration
+app
+  .prefix({
+    prefix: "!",
+    folder: "commands/prefix",
+  })
+  .slash({
+    folder: "commands/slash",
+  })
+  .command({
+    folder: "commands/hybrid",
+  })
+  .events("events")
+  .button({
+    folder: "buttons",
+  })
+  .modal({
+    folder: "modals",
+  })
+  .select({
+    folder: "selects",
+  });
+
+// Set Presence
+app.setPresence({
+  status: "online",
+  activities: [{
+    name: "NextGen Advanced",
+    type: 0,
+  }],
+});
+
+app.run(process.env.TOKEN);
