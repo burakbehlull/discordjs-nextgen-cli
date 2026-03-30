@@ -11,7 +11,7 @@ npx create-discordjs-nextgen my-bot
 The CLI asks for:
 
 - Language: `JavaScript` or `TypeScript`
-- Plugins: `Voice`
+- Plugins: `Voice`, `JSX`
 - Template: `Starter Kit`, `Basic`, `Advanced`
 
 ## Templates
@@ -49,5 +49,6 @@ Creates a fuller example structure:
 ## Notes
 
 - `Voice` adds `discordjs-nextgen-voice`
-- TypeScript uses `src/` and adds `ts-node`, `typescript`, `@types/node`
+- `JSX` adds `discordjs-nextgen-jsx`, injects `app.use(new JSXPlugin())`, and creates one example prefix command
+- TypeScript adds `ts-node`, `typescript`, `@types/node`
 - Generated code follows the current `discordjs-nextgen` API

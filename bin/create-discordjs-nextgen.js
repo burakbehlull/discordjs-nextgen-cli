@@ -11,62 +11,68 @@ import pc from "picocolors";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const templatesRoot = path.resolve(__dirname, "..", "templates");
+const argv = process.argv.slice(2);
 
 async function main() {
   console.log("");
   p.intro(`${pc.bgBlue(pc.white(" NEXTGEN-CLI "))} ${pc.dim("Modern Discord.js Framework")}`);
 
-  const projectName = await p.text({
-    message: "Proje adını ne koyalım?",
+  const cliProjectName = argv.find((arg) => !arg.startsWith("-"));
+  const forceJsx = argv.includes("--jsx");
+
+  const projectName = cliProjectName ?? await p.text({
+    message: "Proje adini ne koyalim?",
     placeholder: "my-nextgen-bot",
     validate(value) {
-      if (value.length === 0) return "Lütfen bir isim girin!";
-      if (value.includes(" ")) return "Proje isminde boşluk olamaz.";
+      if (value.length === 0) return "Lutfen bir isim girin.";
+      if (value.includes(" ")) return "Proje isminde bosluk olamaz.";
     },
   });
 
   if (p.isCancel(projectName)) {
-    p.cancel("İşlem iptal edildi.");
+    p.cancel("Islem iptal edildi.");
     process.exit(0);
   }
 
   const language = await p.select({
     message: "Hangi dili tercih edersiniz?",
     options: [
-      { value: "js", label: "JavaScript", hint: "Esnek ve hızlı" },
-      { value: "ts", label: "TypeScript", hint: "Tip güvenliği (Önerilen)" },
+      { value: "js", label: "JavaScript", hint: "Esnek ve hizli" },
+      { value: "ts", label: "TypeScript", hint: "Tip guvenligi" },
     ],
   });
 
   if (p.isCancel(language)) {
-    p.cancel("İşlem iptal edildi.");
+    p.cancel("Islem iptal edildi.");
     process.exit(0);
   }
 
   const plugins = await p.multiselect({
-    message: "Eklemek istediğiniz pluginleri seçin (Boşluk ile işaretle, Enter ile onayla):",
+    message: "Eklemek istediginiz pluginleri secin:",
     options: [
-      { value: "voice", label: "Voice Support", hint: "Müzik/Ses sistemleri için" },
+      { value: "voice", label: "Voice Support", hint: "Muzik ve ses sistemleri" },
+      { value: "jsx", label: "JSX Support", hint: "discordjs-nextgen-jsx ile JSX komutlar" },
     ],
+    initialValues: forceJsx ? ["jsx"] : [],
     required: false,
   });
 
   if (p.isCancel(plugins)) {
-    p.cancel("İşlem iptal edildi.");
+    p.cancel("Islem iptal edildi.");
     process.exit(0);
   }
 
   const template = await p.select({
-    message: "Hangi şablonla başlamak istersiniz?",
+    message: "Hangi sablonla baslamak istersiniz?",
     options: [
-      { value: "starter", label: "Starter Kit", hint: "Sadece ana dosya (Minimum)" },
-      { value: "basic", label: "Basic", hint: "Klasör yapısı & Basit komutlar" },
-      { value: "advanced", label: "Advanced", hint: "Tam teşekküllü profesyonel yapı" },
+      { value: "starter", label: "Starter Kit", hint: "Minimum kurulum" },
+      { value: "basic", label: "Basic", hint: "Basit komutlar ve olaylar" },
+      { value: "advanced", label: "Advanced", hint: "Buttons, modals, selects dahil" },
     ],
   });
 
   if (p.isCancel(template)) {
-    p.cancel("İşlem iptal edildi.");
+    p.cancel("Islem iptal edildi.");
     process.exit(0);
   }
 
@@ -77,8 +83,8 @@ async function main() {
 
   try {
     if (fs.existsSync(targetDir) && (await fsp.readdir(targetDir)).length > 0) {
-      s.stop(pc.red("Hata!"));
-      p.log.error(`Hata: '${projectName}' klasörü zaten var ve boş değil.`);
+      s.stop(pc.red("Hata"));
+      p.log.error(`'${projectName}' klasoru zaten var ve bos degil.`);
       process.exit(1);
     }
 
@@ -88,33 +94,42 @@ async function main() {
 
     await generateProject(targetDir, { projectName, language, template, plugins });
 
-    s.stop(pc.green("Proje başarıyla oluşturuldu!"));
+    s.stop(pc.green("Proje basariyla olusturuldu."));
 
     const shouldInstall = await p.confirm({
-      message: "Bağımlılıkları şimdi kurmak ister misiniz?",
+      message: "Bagimliliklari simdi kurmak ister misiniz?",
       initialValue: true,
     });
 
     if (shouldInstall) {
       const installSpinner = p.spinner();
-      installSpinner.start(pc.yellow("Paketler yükleniyor..."));
+      installSpinner.start(pc.yellow("Paketler yukleniyor..."));
       const success = await runInstall(targetDir);
       if (success) {
-        installSpinner.stop(pc.green("Kurulum tamamlandı!"));
+        installSpinner.stop(pc.green("Kurulum tamamlandi."));
       } else {
-        installSpinner.stop(pc.red("Kurulum başarısız oldu."));
+        installSpinner.stop(pc.red("Kurulum basarisiz oldu."));
       }
     }
 
-    p.note(
-      `cd ${projectName}\n${!shouldInstall ? "npm install\n" : ""}npm run dev`,
-      "Sıradaki Adımlar"
-    );
+    const runCommand = language === "ts" ? "npm run dev" : "npm run dev";
+    p.note(`cd ${projectName}\n${!shouldInstall ? "npm install\n" : ""}${runCommand}`, "Siradaki Adimlar");
 
-    p.outro(pc.blue("İyi kodlamalar! 🚀"));
+    const pluginNotes = [];
+    if (plugins.includes("jsx")) {
+      pluginNotes.push(
+        language === "ts"
+          ? "JSX aktif: tsconfig.json yazildi, index dosyasina JSXPlugin eklendi, commands/prefix/hello.tsx olusturuldu."
+          : "JSX aktif: jsconfig.json yazildi, index dosyasina JSXPlugin eklendi, commands/prefix/hello.jsx olusturuldu."
+      );
+    }
+    if (pluginNotes.length > 0) {
+      p.note(pluginNotes.join("\n"), "Bilgi");
+    }
 
+    p.outro(pc.blue("Iyi kodlamalar."));
   } catch (err) {
-    s.stop(pc.red("Bir hata oluştu!"));
+    s.stop(pc.red("Bir hata olustu."));
     console.error(err);
     process.exit(1);
   }
@@ -134,27 +149,55 @@ async function generateProject(targetDir, config) {
     version: "1.0.0",
     private: true,
     type: "module",
-    scripts: config.language === "ts" ? {
-      dev: "ts-node index.ts",
-      start: "ts-node index.ts",
-      build: "tsc"
-    } : {
-      dev: "node index.js",
-      start: "node index.js"
-    },
+    scripts: config.language === "ts"
+      ? {
+          dev: "ts-node index.ts",
+          start: "ts-node index.ts",
+          build: "tsc",
+        }
+      : {
+          dev: "node index.js",
+          start: "node index.js",
+        },
     dependencies: {
       "discordjs-nextgen": "latest",
-      "dotenv": "^17.3.1"
-    }
+      "dotenv": "^17.3.1",
+    },
   };
 
   if (config.language === "ts") {
     pkg.devDependencies = {
       "@types/node": "^20.12.0",
       "ts-node": "^10.9.2",
-      "typescript": "^5.4.5"
+      "typescript": "^5.4.5",
     };
-    await writeFile(targetDir, "tsconfig.json", JSON.stringify({
+  }
+
+  if (config.plugins.includes("voice")) {
+    pkg.dependencies["discordjs-nextgen-voice"] = "latest";
+  }
+
+  if (config.plugins.includes("jsx")) {
+    pkg.dependencies["discordjs-nextgen-jsx"] = "latest";
+  }
+
+  await writeLanguageConfig(targetDir, config.language, config.plugins.includes("jsx"));
+  await writeFile(targetDir, "package.json", JSON.stringify(pkg, null, 2));
+  await writeFile(targetDir, ".gitignore", "node_modules\n.env\ndist\n");
+  await writeFile(targetDir, ".env", "TOKEN=YOUR_BOT_TOKEN_HERE\n");
+
+  if (config.plugins.includes("voice")) {
+    await injectVoicePlugin(targetDir, extension, config.template);
+  }
+
+  if (config.plugins.includes("jsx")) {
+    await injectJSXPlugin(targetDir, config.language);
+  }
+}
+
+async function writeLanguageConfig(targetDir, language, useJsx) {
+  if (language === "ts") {
+    const tsconfig = {
       compilerOptions: {
         target: "ESNext",
         module: "ESNext",
@@ -162,21 +205,28 @@ async function generateProject(targetDir, config) {
         esModuleInterop: true,
         strict: true,
         skipLibCheck: true,
-        outDir: "dist"
-      }
+        outDir: "dist",
+      },
+      include: ["**/*"],
+    };
+
+    if (useJsx) {
+      tsconfig.compilerOptions.jsx = "react-jsx";
+      tsconfig.compilerOptions.jsxImportSource = "discordjs-nextgen-jsx";
+    }
+
+    await writeFile(targetDir, "tsconfig.json", JSON.stringify(tsconfig, null, 2));
+    return;
+  }
+
+  if (useJsx) {
+    await writeFile(targetDir, "jsconfig.json", JSON.stringify({
+      compilerOptions: {
+        jsx: "react-jsx",
+        jsxImportSource: "discordjs-nextgen-jsx",
+      },
+      include: ["**/*"],
     }, null, 2));
-  }
-
-  if (config.plugins.includes("voice")) {
-    pkg.dependencies["discordjs-nextgen-voice"] = "latest";
-  }
-
-  await writeFile(targetDir, "package.json", JSON.stringify(pkg, null, 2));
-  await writeFile(targetDir, ".gitignore", "node_modules\n.env\ndist\n");
-  await writeFile(targetDir, ".env", "TOKEN=YOUR_BOT_TOKEN_HERE");
-
-  if (config.plugins.includes("voice")) {
-    await injectVoicePlugin(targetDir, extension, config.template);
   }
 }
 
@@ -185,27 +235,59 @@ async function injectVoicePlugin(targetDir, extension, template) {
   let content = await fsp.readFile(entryPath, "utf8");
 
   const importLine = `import { VoicePlugin } from "discordjs-nextgen-voice";`;
-  const useLine = `\napp.use(new VoicePlugin());`;
 
   if (!content.includes(importLine)) {
     content = `${importLine}\n${content}`;
   }
 
   if (!content.includes("new VoicePlugin()")) {
-    content = content.replace(/const app = new App\((\{[\s\S]*?\}|)\);/, (match) => `${match}\n${useLine}`);
+    content = content.replace(/const app = new App\((\{[\s\S]*?\}|)\);/, (match) => `${match}\n\napp.use(new VoicePlugin());`);
   }
 
   await fsp.writeFile(entryPath, content, "utf8");
 
   if (template !== "starter") {
-    const cmdCode = `export default {\n  name: "join",\n  description: "Sese girer.",\n  run: async (ctx) => {\n    await ctx.voice.join({ channelId: ctx.member.voice.channelId });\n  }\n};`;
-    await writeFile(targetDir, "commands/prefix/join." + extension, cmdCode);
+    const cmdCode = `export default {\n  name: "join",\n  description: "Sese girer.",\n  run: async (ctx) => {\n    await ctx.voice.join({ channelId: ctx.member.voice.channelId });\n  }\n};\n`;
+    await writeFile(targetDir, `commands/prefix/join.${extension}`, cmdCode);
   }
+}
+
+async function injectJSXPlugin(targetDir, language) {
+  const entryExtension = language === "ts" ? "ts" : "js";
+  const jsxExtension = language === "ts" ? "tsx" : "jsx";
+  const entryPath = path.join(targetDir, `index.${entryExtension}`);
+  let content = await fsp.readFile(entryPath, "utf8");
+
+  const importLine = `import { JSXPlugin } from "discordjs-nextgen-jsx";`;
+
+  if (!content.includes(importLine)) {
+    content = `${importLine}\n${content}`;
+  }
+
+  if (!content.includes("new JSXPlugin()")) {
+    content = content.replace(/const app = new App\((\{[\s\S]*?\}|)\);/, (match) => `${match}\n\napp.use(new JSXPlugin());`);
+  }
+
+  if (!content.includes(".prefix(")) {
+    content = content.replace(
+      /app\.setPresence\(/,
+      `app.prefix({\n  folder: 'commands/prefix',\n  prefix: '.',\n});\n\napp.setPresence(`
+    );
+  }
+
+  await fsp.writeFile(entryPath, content, "utf8");
+
+  const jsxPrefixCommand = language === "ts"
+    ? `import type { PrefixCommand } from 'discordjs-nextgen';\nimport { Container, TextDisplay } from 'discordjs-nextgen-jsx';\n\nconst hello: PrefixCommand = {\n  name: 'hello',\n  description: 'JSX example command',\n  run: async (ctx) => {\n    const card = (\n      <Container accentColor={0x5865f2}>\n        <TextDisplay content="Hello from JSX." />\n        <TextDisplay content={\`Author: \${ctx.user.username}\`} />\n      </Container>\n    );\n\n    await ctx.reply({\n      components: [card],\n    });\n  },\n};\n\nexport default hello;\n`
+    : `import { Container, TextDisplay } from 'discordjs-nextgen-jsx';\n\nconst hello = {\n  name: 'hello',\n  description: 'JSX example command',\n  run: async (ctx) => {\n    const card = (\n      <Container accentColor={0x5865f2}>\n        <TextDisplay content="Hello from JSX." />\n        <TextDisplay content={\`Author: \${ctx.user.username}\`} />\n      </Container>\n    );\n\n    await ctx.reply({\n      components: [card],\n    });\n  },\n};\n\nexport default hello;\n`;
+
+  await writeFile(targetDir, `commands/prefix/hello.${jsxExtension}`, jsxPrefixCommand);
 }
 
 async function copyTemplateDirectory(sourceDir, targetDir, context) {
   if (!fs.existsSync(sourceDir)) return;
   const entries = await fsp.readdir(sourceDir, { withFileTypes: true });
+
   for (const entry of entries) {
     const src = path.join(sourceDir, entry.name);
     const destName = entry.name.replace(/__EXT__/g, context.extension);
@@ -214,20 +296,21 @@ async function copyTemplateDirectory(sourceDir, targetDir, context) {
     if (entry.isDirectory()) {
       await fsp.mkdir(dest, { recursive: true });
       await copyTemplateDirectory(src, dest, context);
-    } else {
-      let content = await fsp.readFile(src, "utf8");
-      
-      if (context.language === "ts") {
-        content = content.replace(/\/\/ \[JS\][\s\S]*?\/\/ \[\/JS\]/g, "");
-        content = content.replace(/\/\/ \[TS\]/g, "").replace(/\/\/ \[\/TS\]/g, "");
-      } else {
-        content = content.replace(/\/\/ \[TS\][\s\S]*?\/\/ \[\/TS\]/g, "");
-        content = content.replace(/\/\/ \[JS\]/g, "").replace(/\/\/ \[\/JS\]/g, "");
-      }
-
-      content = content.replaceAll("__EXT__", context.extension);
-      await fsp.writeFile(dest, content, "utf8");
+      continue;
     }
+
+    let content = await fsp.readFile(src, "utf8");
+
+    if (context.language === "ts") {
+      content = content.replace(/\/\/ \[JS\][\s\S]*?\/\/ \[\/JS\]/g, "");
+      content = content.replace(/\/\/ \[TS\]/g, "").replace(/\/\/ \[\/TS\]/g, "");
+    } else {
+      content = content.replace(/\/\/ \[TS\][\s\S]*?\/\/ \[\/TS\]/g, "");
+      content = content.replace(/\/\/ \[JS\]/g, "").replace(/\/\/ \[\/JS\]/g, "");
+    }
+
+    content = content.replaceAll("__EXT__", context.extension);
+    await fsp.writeFile(dest, content, "utf8");
   }
 }
 
@@ -238,7 +321,12 @@ async function writeFile(baseDir, relPath, content) {
 }
 
 async function runInstall(targetDir) {
-  const result = spawnSync("npm", ["install"], { cwd: targetDir, stdio: "inherit", shell: true });
+  const result = spawnSync("npm", ["install"], {
+    cwd: targetDir,
+    stdio: "inherit",
+    shell: true,
+  });
+
   return result.status === 0;
 }
 
