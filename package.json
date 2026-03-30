@@ -1,6 +1,6 @@
 {
   "name": "create-discordjs-nextgen",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Scaffold a Discord bot powered by discordjs-nextgen",
   "bin": {
     "create-discordjs-nextgen": "./bin/create-discordjs-nextgen.js"
