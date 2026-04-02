@@ -54,6 +54,9 @@ async function main() {
       { value: "jsx", label: "JSX Support", hint: "discordjs-nextgen-jsx ile JSX komutlar" },
       { value: "cache", label: "Cache (Sade)", hint: "MemoryAdapter kullanır" },
       { value: "cache-redis", label: "Cache (with Redis)", hint: "RedisAdapter + ioredis kullanır" },
+      { value: "db-sqlite", label: "Database (SQLite)", hint: "discordjs-nextgen-db + better-sqlite3" },
+      { value: "db-mysql", label: "Database (MySQL)", hint: "discordjs-nextgen-db + mysql2" },
+      { value: "db-mongo", label: "Database (MongoDB/Mongoose)", hint: "discordjs-nextgen-db + mongoose" },
     ],
     initialValues: forceJsx ? ["jsx"] : [],
     required: false,
@@ -136,6 +139,16 @@ async function main() {
         pluginNotes.push(`Advanced sablonu secildigi icin commands/prefix/money.${extension} ornek komutu eklendi.`);
       }
     }
+    const dbPlugin = plugins.find(p => p.startsWith("db-"));
+    if (dbPlugin) {
+      let dbName = "SQLite";
+      if (dbPlugin === "db-mysql") dbName = "MySQL";
+      if (dbPlugin === "db-mongo") dbName = "MongoDB/Mongoose";
+      pluginNotes.push(`Database (${dbName}) aktif: discordjs-nextgen-db kuruldu, models/ klasoru olusturuldu.`);
+      if (template === "advanced") {
+        pluginNotes.push(`Advanced sablonu secildigi icin commands/prefix/dbtest.${extension} ornek komutu eklendi.`);
+      }
+    }
     if (pluginNotes.length > 0) {
       p.note(pluginNotes.join("\n"), "Bilgi");
     }
@@ -201,6 +214,19 @@ async function generateProject(targetDir, config) {
     }
   }
 
+  if (config.plugins.some(p => p.startsWith("db-"))) {
+    pkg.dependencies["discordjs-nextgen-db"] = "latest";
+    if (config.plugins.includes("db-sqlite")) {
+      pkg.dependencies["better-sqlite3"] = "latest";
+    }
+    if (config.plugins.includes("db-mysql")) {
+      pkg.dependencies["mysql2"] = "latest";
+    }
+    if (config.plugins.includes("db-mongo")) {
+      pkg.dependencies["mongoose"] = "latest";
+    }
+  }
+
   await writeLanguageConfig(targetDir, config.language, config.plugins.includes("jsx"));
   await writeFile(targetDir, "package.json", JSON.stringify(pkg, null, 2));
   await writeFile(targetDir, ".gitignore", "node_modules\n.env\ndist\n");
@@ -217,6 +243,11 @@ async function generateProject(targetDir, config) {
   if (config.plugins.includes("cache") || config.plugins.includes("cache-redis")) {
     const useRedis = config.plugins.includes("cache-redis");
     await injectCachePlugin(targetDir, extension, useRedis, config.template, config.language);
+  }
+
+  const dbPlugin = config.plugins.find(p => p.startsWith("db-"));
+  if (dbPlugin) {
+    await injectDatabasePlugin(targetDir, extension, dbPlugin, config.template, config.language);
   }
 }
 
@@ -336,6 +367,55 @@ async function injectCachePlugin(targetDir, extension, useRedis, template, langu
       : `const money = {\n  name: 'money',\n  description: 'Cache ile bakiye sistemi.',\n  run: async (ctx) => {\n    const userId = ctx.user.id;\n    let user = await ctx.cache.user.get(userId) || { coins: 0 };\n    user.coins += 100;\n    await ctx.cache.user.set(userId, user);\n    await ctx.reply(\`100 coin eklendi! Mevcut bakiyen: \${user.coins}\`);\n  }\n};\n\nexport default money;\n`;
 
     await writeFile(targetDir, `commands/prefix/money.${extension}`, cmdCode);
+  }
+}
+
+async function injectDatabasePlugin(targetDir, extension, pluginName, template, language) {
+  const entryPath = path.join(targetDir, `index.${extension}`);
+  let content = await fsp.readFile(entryPath, "utf8");
+
+  let adapterName, adapterImport, pluginConfig;
+
+  if (pluginName === "db-sqlite") {
+    adapterName = "SQLiteAdapter";
+    adapterImport = `import { DatabasePlugin, SQLiteAdapter } from "discordjs-nextgen-db";`;
+    pluginConfig = `app.use(new DatabasePlugin({ folder: "./models", adapter: new SQLiteAdapter({ path: "./database.sqlite" }) }));`;
+  } else if (pluginName === "db-mysql") {
+    adapterName = "MySQLAdapter";
+    adapterImport = `import { DatabasePlugin, MySQLAdapter } from "discordjs-nextgen-db";`;
+    pluginConfig = `app.use(new DatabasePlugin({ folder: "./models", adapter: new MySQLAdapter({ host: "localhost", user: "root", database: "nextgen" }) }));`;
+  } else if (pluginName === "db-mongo") {
+    adapterName = "MongooseAdapter";
+    adapterImport = `import { DatabasePlugin, MongooseAdapter } from "discordjs-nextgen-db";`;
+    pluginConfig = `app.use(new DatabasePlugin({ folder: "./models", adapter: new MongooseAdapter({ uri: "mongodb://localhost:27017/nextgen" }) }));`;
+  }
+
+  if (!content.includes(adapterImport)) {
+    content = `${adapterImport}\n${content}`;
+  }
+
+  if (!content.includes("new DatabasePlugin")) {
+    content = content.replace(/const app = new App\((\{[\s\S]*?\}|)\);/, (match) => `${match}\n\n${pluginConfig}`);
+  }
+
+  await fsp.writeFile(entryPath, content, "utf8");
+
+  // Create models directory
+  const modelsDir = path.join(targetDir, "models");
+  if (!fs.existsSync(modelsDir)) {
+    await fsp.mkdir(modelsDir);
+  }
+
+  // Create sample user model
+  const userModelCode = `export default (db) => {\n  db.define("user");\n};\n`;
+  await fsp.writeFile(path.join(modelsDir, `user.${extension}`), userModelCode, "utf8");
+
+  if (template === "advanced") {
+    const dbCmdCode = language === "ts"
+      ? `import type { PrefixCommand } from 'discordjs-nextgen';\n\nconst dbtest: PrefixCommand = {\n  name: 'dbtest',\n  description: 'Database CRUD testi.',\n  run: async (ctx) => {\n    const userId = ctx.user.id;\n    let data = await ctx.db.user.get(userId) || { count: 0 };\n    data.count += 1;\n    await ctx.db.user.set(userId, data);\n    await ctx.reply(\`DB Test: \${data.count} kez çalıştırıldı.\`);\n  }\n};\n\nexport default dbtest;\n`
+      : `const dbtest = {\n  name: 'dbtest',\n  description: 'Database CRUD testi.',\n  run: async (ctx) => {\n    const userId = ctx.user.id;\n    let data = await ctx.db.user.get(userId) || { count: 0 };\n    data.count += 1;\n    await ctx.db.user.set(userId, data);\n    await ctx.reply(\`DB Test: \${data.count} kez çalıştırıldı.\`);\n  }\n};\n\nexport default dbtest;\n`;
+
+    await writeFile(targetDir, `commands/prefix/dbtest.${extension}`, dbCmdCode);
   }
 }
 

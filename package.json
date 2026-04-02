@@ -6,6 +6,12 @@
     "create-discordjs-nextgen": "./bin/create-discordjs-nextgen.js"
   },
   "type": "module",
+  "homepage": "https://discordjs-nextgen.vercel.app/docs/cli",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/burakbehlull/discordjs-nextgen-cli",
+    "directory": "nextgen-cli"
+  },
   "files": [
     "bin",
     "README.md",
