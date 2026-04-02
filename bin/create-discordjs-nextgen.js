@@ -52,6 +52,8 @@ async function main() {
     options: [
       { value: "voice", label: "Voice Support", hint: "Muzik ve ses sistemleri" },
       { value: "jsx", label: "JSX Support", hint: "discordjs-nextgen-jsx ile JSX komutlar" },
+      { value: "cache", label: "Cache (Sade)", hint: "MemoryAdapter kullanır" },
+      { value: "cache-redis", label: "Cache (with Redis)", hint: "RedisAdapter + ioredis kullanır" },
     ],
     initialValues: forceJsx ? ["jsx"] : [],
     required: false,
@@ -123,6 +125,17 @@ async function main() {
           : "JSX aktif: jsconfig.json yazildi, index dosyasina JSXPlugin eklendi, commands/prefix/hello.jsx olusturuldu."
       );
     }
+    if (plugins.includes("cache") || plugins.includes("cache-redis")) {
+      const isRedis = plugins.includes("cache-redis");
+      pluginNotes.push(
+        isRedis
+          ? "Cache (Redis) aktif: ioredis kuruldu, index dosyasina RedisAdapter eklendi."
+          : "Cache (Sade) aktif: index dosyasina MemoryAdapter eklendi."
+      );
+      if (template === "advanced") {
+        pluginNotes.push(`Advanced sablonu secildigi icin commands/prefix/money.${extension} ornek komutu eklendi.`);
+      }
+    }
     if (pluginNotes.length > 0) {
       p.note(pluginNotes.join("\n"), "Bilgi");
     }
@@ -181,6 +194,13 @@ async function generateProject(targetDir, config) {
     pkg.dependencies["discordjs-nextgen-jsx"] = "latest";
   }
 
+  if (config.plugins.includes("cache") || config.plugins.includes("cache-redis")) {
+    pkg.dependencies["discordjs-nextgen-cache"] = "latest";
+    if (config.plugins.includes("cache-redis")) {
+      pkg.dependencies["ioredis"] = "latest";
+    }
+  }
+
   await writeLanguageConfig(targetDir, config.language, config.plugins.includes("jsx"));
   await writeFile(targetDir, "package.json", JSON.stringify(pkg, null, 2));
   await writeFile(targetDir, ".gitignore", "node_modules\n.env\ndist\n");
@@ -192,6 +212,11 @@ async function generateProject(targetDir, config) {
 
   if (config.plugins.includes("jsx")) {
     await injectJSXPlugin(targetDir, config.language);
+  }
+
+  if (config.plugins.includes("cache") || config.plugins.includes("cache-redis")) {
+    const useRedis = config.plugins.includes("cache-redis");
+    await injectCachePlugin(targetDir, extension, useRedis, config.template, config.language);
   }
 }
 
@@ -282,6 +307,36 @@ async function injectJSXPlugin(targetDir, language) {
     : `import { Container, TextDisplay } from 'discordjs-nextgen-jsx';\n\nconst hello = {\n  name: 'hello',\n  description: 'JSX example command',\n  run: async (ctx) => {\n    const card = (\n      <Container accentColor={0x5865f2}>\n        <TextDisplay content="Hello from JSX." />\n        <TextDisplay content={\`Author: \${ctx.user.username}\`} />\n      </Container>\n    );\n\n    await ctx.reply({\n      components: [card],\n    });\n  },\n};\n\nexport default hello;\n`;
 
   await writeFile(targetDir, `commands/prefix/hello.${jsxExtension}`, jsxPrefixCommand);
+}
+
+async function injectCachePlugin(targetDir, extension, useRedis, template, language) {
+  const entryPath = path.join(targetDir, `index.${extension}`);
+  let content = await fsp.readFile(entryPath, "utf8");
+
+  const adapterName = useRedis ? "RedisAdapter" : "MemoryAdapter";
+  const importLine = `import { CachePlugin, ${adapterName} } from "discordjs-nextgen-cache";`;
+
+  if (!content.includes(importLine)) {
+    content = `${importLine}\n${content}`;
+  }
+
+  if (!content.includes("new CachePlugin")) {
+    const pluginCode = useRedis
+      ? `app.use(new CachePlugin({ adapter: new RedisAdapter() }));`
+      : `app.use(new CachePlugin({ adapter: new MemoryAdapter() }));`;
+
+    content = content.replace(/const app = new App\((\{[\s\S]*?\}|)\);/, (match) => `${match}\n\n${pluginCode}`);
+  }
+
+  await fsp.writeFile(entryPath, content, "utf8");
+
+  if (template === "advanced") {
+    const cmdCode = language === "ts"
+      ? `import type { PrefixCommand } from 'discordjs-nextgen';\n\nconst money: PrefixCommand = {\n  name: 'money',\n  description: 'Cache ile bakiye sistemi.',\n  run: async (ctx) => {\n    const userId = ctx.user.id;\n    let user = await ctx.cache.user.get(userId) || { coins: 0 };\n    user.coins += 100;\n    await ctx.cache.user.set(userId, user);\n    await ctx.reply(\`100 coin eklendi! Mevcut bakiyen: \${user.coins}\`);\n  }\n};\n\nexport default money;\n`
+      : `const money = {\n  name: 'money',\n  description: 'Cache ile bakiye sistemi.',\n  run: async (ctx) => {\n    const userId = ctx.user.id;\n    let user = await ctx.cache.user.get(userId) || { coins: 0 };\n    user.coins += 100;\n    await ctx.cache.user.set(userId, user);\n    await ctx.reply(\`100 coin eklendi! Mevcut bakiyen: \${user.coins}\`);\n  }\n};\n\nexport default money;\n`;
+
+    await writeFile(targetDir, `commands/prefix/money.${extension}`, cmdCode);
+  }
 }
 
 async function copyTemplateDirectory(sourceDir, targetDir, context) {
